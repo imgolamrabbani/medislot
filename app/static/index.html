@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MediSlot</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 32px; color: #222; }
+    h1 { color: #0b6e99; margin-bottom: 4px; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin: 16px 0; max-width: 760px; }
+    select, input, button { padding: 6px 10px; margin-right: 8px; font-size: 14px; }
+    button { background: #0b6e99; color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border-bottom: 1px solid #eee; padding: 6px; text-align: left; }
+    #msg { margin-top: 10px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>MediSlot</h1>
+  <div>Clinic Appointment &amp; Billing &middot; <a href="/docs">API Docs (Swagger)</a></div>
+
+  <div class="card">
+    <h3>Book an Appointment</h3>
+    <select id="patient"></select>
+    <select id="doctor"></select>
+    <input id="slot" type="datetime-local">
+    <button id="book">Book</button>
+    <div id="msg"></div>
+  </div>
+
+  <div class="card">
+    <h3>Appointments</h3>
+    <table>
+      <thead><tr><th>ID</th><th>Patient</th><th>Doctor</th><th>Slot</th><th>Status</th><th>Fee (BDT)</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const get = url => fetch(url).then(r => r.json());
+
+    async function load() {
+      const [pats, docs, appts, invs] = await Promise.all(
+        ["/patients", "/doctors", "/appointments", "/invoices"].map(get));
+      const name = (list, id) => list.find(x => x.id === id).name;
+      $("patient").innerHTML = pats.map(p => `<option value="${p.id}">${p.name}</option>`).join("");
+      $("doctor").innerHTML = docs.map(d => `<option value="${d.id}">${d.name} (${d.specialty})</option>`).join("");
+      $("rows").innerHTML = appts.map(a => `<tr><td>${a.id}</td><td>${name(pats, a.patient_id)}</td>
+        <td>${name(docs, a.doctor_id)}</td><td>${a.slot}</td><td>${a.status}</td>
+        <td>${invs.find(i => i.appointment_id === a.id).amount}</td></tr>`).join("");
+    }
+
+    $("book").onclick = async () => {
+      const res = await fetch("/appointments", {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({patient_id: +$("patient").value, doctor_id: +$("doctor").value, slot: $("slot").value})
+      });
+      const body = await res.json();
+      $("msg").textContent = res.ok ? `Booked! Appointment #${body.id}` : `Error: ${body.detail}`;
+      $("msg").style.color = res.ok ? "green" : "crimson";
+      load();
+    };
+    load();
+  </script>
+</body>
+</html>
