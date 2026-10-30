@@ -15,5 +15,7 @@ uvicorn app.main:app --reload      # UI: /   Swagger: /docs
 
 ## Testing
 ```bash
-pytest -v --cov=app --cov-fail-under=90    # same command GitHub Actions runs
+pytest --cov=app --cov-report=term-missing   # all tests + coverage
+pytest -m ui                                  # Selenium browser test only
 ```
+CI (GitHub Actions) runs the same suite on every push and pull request.
