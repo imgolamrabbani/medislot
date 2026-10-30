@@ -2,6 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from app.billing import PaymentGateway
 from app.db import connect
 from app.events import EventBus
 from app.services import ClinicService
@@ -11,7 +12,7 @@ SLOT = "2030-01-15T10:00"
 
 @pytest.fixture
 def gateway():
-    return Mock()
+    return Mock(spec=PaymentGateway)          # no real payment is ever made
 
 
 @pytest.fixture
