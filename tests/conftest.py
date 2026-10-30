@@ -17,3 +17,10 @@ def gateway():
 @pytest.fixture
 def svc(gateway):
     return ClinicService(connect(":memory:"), gateway, EventBus())
+
+
+@pytest.fixture
+def booked(svc):
+    p = svc.register_patient("Rahim", "01712345678", 30)
+    d = svc.add_doctor("Dr. Nasrin", "Cardiology", 800)
+    return svc.book(p["id"], d["id"], SLOT)

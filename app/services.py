@@ -1,6 +1,8 @@
 """Business logic for all modules. Dependencies are injected (easy to mock)."""
 import re
+from datetime import datetime
 
+from .billing import fee_strategy_for
 from .db import Repository
 from .events import EventBus
 
@@ -42,3 +44,27 @@ class ClinicService:
         if fee <= 0:
             raise ValueError("Fee must be positive")
         return self.doctors.add(name=name, specialty=specialty, fee=fee)
+
+    # ---- Module 3: Appointments ----
+    def book(self, patient_id: int, doctor_id: int, slot: str) -> dict:
+        patient = self._get(self.patients, patient_id)
+        doctor = self._get(self.doctors, doctor_id)
+        if datetime.fromisoformat(slot) <= datetime.now():
+            raise ValueError("Slot must be in the future")
+        if self.appointments.find(doctor_id=doctor_id, slot=slot, status="BOOKED"):
+            raise ConflictError("Slot already booked")
+        appt = self.appointments.add(patient_id=patient_id, doctor_id=doctor_id, slot=slot)
+        amount = fee_strategy_for(patient["age"]).compute(doctor["fee"])
+        invoice = self.invoices.add(appointment_id=appt["id"], amount=amount)
+        self.bus.publish("appointment_booked", {
+            "phone": patient["phone"], "doctor": doctor["name"], "slot": slot,
+            "amount": amount})
+        return {**appt, "invoice": invoice}
+
+    def cancel(self, appointment_id: int) -> dict:
+        appt = self._get(self.appointments, appointment_id)
+        if appt["status"] != "BOOKED":
+            raise ConflictError("Appointment is not active")
+        patient = self._get(self.patients, appt["patient_id"])
+        self.bus.publish("appointment_cancelled", {"phone": patient["phone"], "slot": appt["slot"]})
+        return self.appointments.update(appointment_id, status="CANCELLED")
