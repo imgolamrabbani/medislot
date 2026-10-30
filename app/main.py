@@ -38,13 +38,28 @@ class AppointmentIn(BaseModel):
     slot: str = Field(examples=["2026-11-05T10:30"], description="ISO date-time")
 
 
-def create_app(db_path="medislot.db", gateway=None, notifier=None) -> FastAPI:
+def seed_initial_data(svc: ClinicService):
+    """Seed initial sample data if database is empty."""
+    if not svc.patients.find():
+        svc.register_patient("Rahim Uddin", "01712345678", 68)     # Senior discount 30%
+        svc.register_patient("Ayesha Begum", "01819876543", 32)     # Standard adult
+        svc.register_patient("Tanvir Ahmed", "01911223344", 8)      # Child discount 50%
+    if not svc.doctors.find():
+        svc.add_doctor("Dr. Nasrin Akter", "Cardiology", 1000.0)
+        svc.add_doctor("Dr. Mahbubur Rahman", "Neurology", 1200.0)
+        svc.add_doctor("Dr. Farhana Khan", "Pediatrics", 800.0)
+
+
+def create_app(db_path="medislot.db", gateway=None, notifier=None, auto_seed=False) -> FastAPI:
     app = FastAPI(title="MediSlot API", version="1.0.0", openapi_tags=TAGS,
                   description="Clinic appointment and billing system (CSE 3206 Lab 6).")
     bus = EventBus()
     notifier = notifier or NotifierFactory.create("inapp")
     subscribe_notifications(bus, notifier)
     svc = ClinicService(connect(db_path), gateway or BkashAdapter(SandboxBkashClient()), bus)
+
+    if auto_seed:
+        seed_initial_data(svc)
 
     errors = {NotFoundError: 404, ValueError: 400, ConflictError: 409, PaymentError: 402}
     for exc, code in errors.items():
@@ -54,6 +69,11 @@ def create_app(db_path="medislot.db", gateway=None, notifier=None) -> FastAPI:
     @app.get("/", include_in_schema=False)
     def ui():
         return FileResponse(Path(__file__).parent / "static" / "index.html")
+
+    @app.post("/seed", tags=["System"], include_in_schema=False)
+    def seed():
+        seed_initial_data(svc)
+        return {"status": "seeded", "patients": len(svc.patients.find()), "doctors": len(svc.doctors.find())}
 
     @app.post("/patients", tags=["Patients"], status_code=201)
     def register_patient(p: PatientIn):
@@ -100,4 +120,4 @@ def create_app(db_path="medislot.db", gateway=None, notifier=None) -> FastAPI:
     return app
 
 
-app = create_app()
+app = create_app(auto_seed=True)

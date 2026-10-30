@@ -1,66 +1,550 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>MediSlot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MediSlot — Clinic Appointment &amp; Billing System</title>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 32px; color: #222; }
-    h1 { color: #0b6e99; margin-bottom: 4px; }
-    .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin: 16px 0; max-width: 760px; }
-    select, input, button { padding: 6px 10px; margin-right: 8px; font-size: 14px; }
-    button { background: #0b6e99; color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border-bottom: 1px solid #eee; padding: 6px; text-align: left; }
-    #msg { margin-top: 10px; font-weight: 600; }
+    :root {
+      --primary: #0b6e99;
+      --primary-dark: #084e6d;
+      --secondary: #16213e;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --bkash: #d12053;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); padding: 24px; line-height: 1.5; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 2px solid var(--border); margin-bottom: 24px; }
+    .brand h1 { color: var(--primary); font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+    .brand p { color: var(--text-muted); font-size: 14px; margin-top: 2px; }
+    .nav-links { display: flex; gap: 12px; align-items: center; }
+    .nav-links a { color: var(--primary); text-decoration: none; font-size: 14px; font-weight: 500; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+    .nav-links a:hover { background: #f1f5f9; }
+    .btn-seed { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-weight: 600; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .btn-seed:hover { background: #bae6fd; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .tab-btn { background: none; border: none; padding: 10px 18px; font-size: 15px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Cards & Layout */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .card h3 { font-size: 17px; margin-bottom: 14px; color: var(--secondary); display: flex; justify-content: space-between; align-items: center; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    /* Forms */
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted); }
+    select, input[type="text"], input[type="number"], input[type="datetime-local"] { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: #fff; }
+    select:focus, input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(11,110,153,0.15); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 18px; font-size: 14px; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; transition: all 0.15s; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-danger { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; padding: 4px 10px; font-size: 12px; }
+    .btn-danger:hover { background: #fecaca; }
+    .btn-bkash { background: var(--bkash); color: #fff; padding: 5px 12px; font-size: 12px; border-radius: 4px; font-weight: 600; }
+    .btn-bkash:hover { opacity: 0.9; }
+
+    /* Live Fee Breakdown Box */
+    .fee-preview { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 12px; margin-bottom: 14px; font-size: 14px; color: #166534; }
+    .fee-preview strong { font-size: 16px; color: #15803d; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { background: #f8fafc; text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid var(--border); }
+    td { padding: 11px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+
+    /* Badges */
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
+    .badge-senior { background: #fef3c7; color: #92400e; }
+    .badge-adult { background: #e0f2fe; color: #075985; }
+    .badge-child { background: #f3e8ff; color: #6b21a8; }
+    .badge-booked { background: #dcfce7; color: #166534; }
+    .badge-cancelled { background: #fee2e2; color: #991b1b; }
+    .badge-paid { background: #dcfce7; color: #166534; }
+    .badge-unpaid { background: #fef3c7; color: #92400e; }
+
+    /* Messages & Alert */
+    #msg { padding: 10px 14px; border-radius: 6px; font-size: 14px; font-weight: 600; margin-top: 12px; display: none; }
+    #msg.show { display: block; }
+    .msg-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .msg-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+    .empty-note { text-align: center; color: var(--text-muted); padding: 24px; font-size: 14px; }
   </style>
 </head>
 <body>
-  <h1>MediSlot</h1>
-  <div>Clinic Appointment &amp; Billing &middot; <a href="/docs">API Docs (Swagger)</a></div>
+<div class="container">
+  <header>
+    <div class="brand">
+      <h1>MediSlot</h1>
+      <p>Clinic Appointment Scheduling &amp; Automated Patient Billing System (CSE 3206)</p>
+    </div>
+    <div class="nav-links">
+      <button class="btn-seed" id="btn-seed" title="Seed default patients and doctors">⚡ Re-seed Demo Data</button>
+      <a href="/docs" target="_blank">📖 Swagger API Docs</a>
+      <a href="/openapi.json" target="_blank">📄 OpenAPI Spec</a>
+    </div>
+  </header>
 
-  <div class="card">
-    <h3>Book an Appointment</h3>
-    <select id="patient"></select>
-    <select id="doctor"></select>
-    <input id="slot" type="datetime-local">
-    <button id="book">Book</button>
-    <div id="msg"></div>
+  <!-- Navigation Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="tab-booking">📅 Book Appointment</button>
+    <button class="tab-btn" data-tab="tab-patients">👤 Patients (Module 1)</button>
+    <button class="tab-btn" data-tab="tab-doctors">🩺 Doctors (Module 2)</button>
+    <button class="tab-btn" data-tab="tab-billing">💳 Invoices &amp; bKash (Module 4)</button>
+    <button class="tab-btn" data-tab="tab-notifications">🔔 Notifications (Module 5)</button>
   </div>
 
-  <div class="card">
-    <h3>Appointments</h3>
-    <table>
-      <thead><tr><th>ID</th><th>Patient</th><th>Doctor</th><th>Slot</th><th>Status</th><th>Fee (BDT)</th></tr></thead>
-      <tbody id="rows"></tbody>
-    </table>
+  <!-- TAB 1: Booking & Appointments -->
+  <div id="tab-booking" class="tab-content active">
+    <div class="card">
+      <h3>Book an Appointment</h3>
+      <div class="grid-2">
+        <div>
+          <div class="form-group">
+            <label for="patient">Select Patient (Strategy Pattern: Age-based fee calculation):</label>
+            <select id="patient"></select>
+          </div>
+          <div class="form-group">
+            <label for="doctor">Select Doctor &amp; Specialty:</label>
+            <select id="doctor"></select>
+          </div>
+        </div>
+        <div>
+          <div class="form-group">
+            <label for="slot">Appointment Date &amp; Time:</label>
+            <input id="slot" type="datetime-local">
+          </div>
+          <div class="fee-preview" id="fee-preview">
+            Selecting patient and doctor...
+          </div>
+          <button id="book" class="btn btn-primary" style="width: 100%;">Confirm &amp; Book Appointment</button>
+        </div>
+      </div>
+      <div id="msg"></div>
+    </div>
+
+    <div class="card">
+      <h3>Active &amp; Past Appointments</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Patient</th>
+            <th>Doctor</th>
+            <th>Slot</th>
+            <th>Status</th>
+            <th>Fee (BDT)</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
   </div>
 
-  <script>
-    const $ = id => document.getElementById(id);
-    const get = url => fetch(url).then(r => r.json());
+  <!-- TAB 2: Patients -->
+  <div id="tab-patients" class="tab-content">
+    <div class="grid-2">
+      <div class="card">
+        <h3>Register New Patient</h3>
+        <div class="form-group">
+          <label>Full Name:</label>
+          <input type="text" id="new-pat-name" placeholder="e.g. Kamal Hossain">
+        </div>
+        <div class="form-group">
+          <label>Phone Number (11 digits, starts with 01):</label>
+          <input type="text" id="new-pat-phone" placeholder="017XXXXXXXX">
+        </div>
+        <div class="form-group">
+          <label>Age (0-120):</label>
+          <input type="number" id="new-pat-age" placeholder="35">
+        </div>
+        <button id="btn-add-patient" class="btn btn-primary">Register Patient</button>
+        <div id="pat-msg"></div>
+      </div>
 
-    async function load() {
-      const [pats, docs, appts, invs] = await Promise.all(
-        ["/patients", "/doctors", "/appointments", "/invoices"].map(get));
-      const name = (list, id) => list.find(x => x.id === id).name;
-      $("patient").innerHTML = pats.map(p => `<option value="${p.id}">${p.name}</option>`).join("");
-      $("doctor").innerHTML = docs.map(d => `<option value="${d.id}">${d.name} (${d.specialty})</option>`).join("");
-      $("rows").innerHTML = appts.map(a => `<tr><td>${a.id}</td><td>${name(pats, a.patient_id)}</td>
-        <td>${name(docs, a.doctor_id)}</td><td>${a.slot}</td><td>${a.status}</td>
-        <td>${invs.find(i => i.appointment_id === a.id).amount}</td></tr>`).join("");
+      <div class="card">
+        <h3>Registered Patients</h3>
+        <table>
+          <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Age</th><th>Category</th></tr></thead>
+          <tbody id="patient-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: Doctors -->
+  <div id="tab-doctors" class="tab-content">
+    <div class="grid-2">
+      <div class="card">
+        <h3>Add New Doctor</h3>
+        <div class="form-group">
+          <label>Doctor Name:</label>
+          <input type="text" id="new-doc-name" placeholder="e.g. Dr. Shamsul Huda">
+        </div>
+        <div class="form-group">
+          <label>Specialty:</label>
+          <input type="text" id="new-doc-spec" placeholder="e.g. Dermatology">
+        </div>
+        <div class="form-group">
+          <label>Consultation Fee (BDT):</label>
+          <input type="number" id="new-doc-fee" placeholder="900">
+        </div>
+        <button id="btn-add-doctor" class="btn btn-primary">Add Doctor</button>
+        <div id="doc-msg"></div>
+      </div>
+
+      <div class="card">
+        <h3>Doctor Directory</h3>
+        <table>
+          <thead><tr><th>ID</th><th>Name</th><th>Specialty</th><th>Consultation Fee</th></tr></thead>
+          <tbody id="doctor-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: Billing & Invoices -->
+  <div id="tab-billing" class="tab-content">
+    <div class="card">
+      <h3>Billing &amp; Invoices (Adapter Pattern: bKash Integration)</h3>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+        Consultation invoices are created automatically during booking using the Strategy pattern. Payments are charged through the <strong>BkashAdapter</strong> which converts taka to poisha and handles vendor SDK transactions.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Invoice ID</th>
+            <th>Appt ID</th>
+            <th>Patient</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Transaction ID</th>
+            <th>Payment Action</th>
+          </tr>
+        </thead>
+        <tbody id="invoice-rows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 5: Notifications Outbox -->
+  <div id="tab-notifications" class="tab-content">
+    <div class="card">
+      <h3>Notification Outbox (Observer + Factory Patterns)</h3>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+        When an appointment is booked or cancelled, the domain event is published over the <strong>EventBus</strong> (Observer). The <strong>NotifierFactory</strong> instantiates the appropriate transport and dispatches the message asynchronously.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Recipient (Phone)</th>
+            <th>Notification Message</th>
+            <th>Channel</th>
+          </tr>
+        </thead>
+        <tbody id="notification-rows"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const get = url => fetch(url).then(r => r.json());
+
+  let state = { patients: [], doctors: [], appointments: [], invoices: [], notifications: [] };
+
+  // Set default appointment slot to tomorrow at 10:00 AM
+  function setDefaultSlot() {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(10, 0, 0, 0);
+    const pad = n => String(n).padStart(2, '0');
+    const iso = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    $("slot").value = iso;
+  }
+
+  // Live fee preview based on Strategy Pattern
+  function updateFeePreview() {
+    const patId = +$("patient").value;
+    const docId = +$("doctor").value;
+    const pat = state.patients.find(p => p.id === patId);
+    const doc = state.doctors.find(d => d.id === docId);
+
+    if (!pat || !doc) {
+      $("fee-preview").innerHTML = "Please register or select a patient and a doctor.";
+      return;
     }
 
-    $("book").onclick = async () => {
+    let discountNote = "Standard Rate (0% discount)";
+    let rate = 1.0;
+    if (pat.age >= 60) {
+      discountNote = "Senior Citizen (-30% discount via SeniorFee Strategy)";
+      rate = 0.70;
+    } else if (pat.age < 12) {
+      discountNote = "Child Special (-50% discount via ChildFee Strategy)";
+      rate = 0.50;
+    }
+    const finalFee = Math.round(doc.fee * rate);
+    $("fee-preview").innerHTML = `Base Fee: <strong>${doc.fee} BDT</strong> &middot; ${discountNote} &rarr; Final Payable: <strong>${finalFee} BDT</strong>`;
+  }
+
+  function getBadge(age) {
+    if (age >= 60) return `<span class="badge badge-senior">Senior (${age})</span>`;
+    if (age < 12) return `<span class="badge badge-child">Child (${age})</span>`;
+    return `<span class="badge badge-adult">Adult (${age})</span>`;
+  }
+
+  async function loadData() {
+    try {
+      const [pats, docs, appts, invs, notifs] = await Promise.all([
+        get("/patients"), get("/doctors"), get("/appointments"), get("/invoices"), get("/notifications")
+      ]);
+      state = { patients: pats, doctors: docs, appointments: appts, invoices: invs, notifications: notifs };
+
+      // If empty on first load, seed automatically
+      if (pats.length === 0 && docs.length === 0) {
+        await fetch("/seed", { method: "POST" });
+        return loadData();
+      }
+
+      // Populate selects
+      const currentPat = $("patient").value;
+      const currentDoc = $("doctor").value;
+      $("patient").innerHTML = pats.map(p => {
+        const cat = p.age >= 60 ? "Senior -30%" : (p.age < 12 ? "Child -50%" : "Adult");
+        return `<option value="${p.id}">${p.name} (Age: ${p.age} — ${cat})</option>`;
+      }).join("");
+      if (currentPat) $("patient").value = currentPat;
+
+      $("doctor").innerHTML = docs.map(d => `<option value="${d.id}">${d.name} (${d.specialty} — ${d.fee} BDT)</option>`).join("");
+      if (currentDoc) $("doctor").value = currentDoc;
+
+      updateFeePreview();
+
+      // Render Appointments (must populate #rows for Selenium tests)
+      const name = (list, id) => (list.find(x => x.id === id) || { name: 'Unknown' }).name;
+      $("rows").innerHTML = appts.map(a => {
+        const inv = invs.find(i => i.appointment_id === a.id);
+        const amount = inv ? inv.amount : '-';
+        const isBooked = a.status === 'BOOKED';
+        const statusBadge = isBooked
+          ? '<span class="badge badge-booked">BOOKED</span>'
+          : '<span class="badge badge-cancelled">CANCELLED</span>';
+        const actionBtn = isBooked
+          ? `<button class="btn btn-danger" onclick="cancelAppointment(${a.id})">Cancel</button>`
+          : '<span style="color:#94a3b8;font-size:12px;">Cancelled</span>';
+
+        return `<tr>
+          <td>#${a.id}</td>
+          <td>${name(pats, a.patient_id)}</td>
+          <td>${name(docs, a.doctor_id)}</td>
+          <td>${a.slot}</td>
+          <td>${statusBadge}</td>
+          <td><strong>${amount}</strong></td>
+          <td>${actionBtn}</td>
+        </tr>`;
+      }).join("") || '<tr><td colspan="7" class="empty-note">No appointments booked yet.</td></tr>';
+
+      // Render Patients Table
+      $("patient-rows").innerHTML = pats.map(p => `<tr>
+        <td>#${p.id}</td>
+        <td><strong>${p.name}</strong></td>
+        <td>${p.phone}</td>
+        <td>${p.age}</td>
+        <td>${getBadge(p.age)}</td>
+      </tr>`).join("");
+
+      // Render Doctors Table
+      $("doctor-rows").innerHTML = docs.map(d => `<tr>
+        <td>#${d.id}</td>
+        <td><strong>${d.name}</strong></td>
+        <td>${d.specialty}</td>
+        <td><strong>${d.fee} BDT</strong></td>
+      </tr>`).join("");
+
+      // Render Invoices Table
+      $("invoice-rows").innerHTML = invs.map(i => {
+        const appt = appts.find(a => a.id === i.appointment_id);
+        const patName = appt ? name(pats, appt.patient_id) : '-';
+        const isPaid = i.paid === 1;
+        const statusBadge = isPaid
+          ? '<span class="badge badge-paid">PAID</span>'
+          : '<span class="badge badge-unpaid">UNPAID</span>';
+        const action = isPaid
+          ? `<span style="color:#10b981;font-weight:600;font-size:12px;">✓ Completed</span>`
+          : `<button class="btn btn-bkash" onclick="payInvoice(${i.id})">💳 Pay with bKash</button>`;
+        const txn = i.txn_id ? `<code>${i.txn_id}</code>` : '<span style="color:#94a3b8;">Pending</span>';
+
+        return `<tr>
+          <td>INV-${i.id}</td>
+          <td>#${i.appointment_id}</td>
+          <td>${patName}</td>
+          <td><strong>${i.amount} BDT</strong></td>
+          <td>${statusBadge}</td>
+          <td>${txn}</td>
+          <td>${action}</td>
+        </tr>`;
+      }).join("") || '<tr><td colspan="7" class="empty-note">No invoices generated.</td></tr>';
+
+      // Render Notifications Outbox
+      $("notification-rows").innerHTML = notifs.map(n => `<tr>
+        <td><code>${n.to}</code></td>
+        <td>${n.message}</td>
+        <td><span class="badge badge-adult">In-App</span></td>
+      </tr>`).join("") || '<tr><td colspan="3" class="empty-note">No notifications dispatched yet.</td></tr>';
+
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  // Booking action
+  $("book").onclick = async () => {
+    const patId = +$("patient").value;
+    const docId = +$("doctor").value;
+    const slot = $("slot").value;
+
+    if (!patId || !docId) {
+      showMsg("Please select both a patient and a doctor.", false);
+      return;
+    }
+    if (!slot) {
+      showMsg("Please choose an appointment date and time.", false);
+      return;
+    }
+
+    try {
       const res = await fetch("/appointments", {
-        method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({patient_id: +$("patient").value, doctor_id: +$("doctor").value, slot: $("slot").value})
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patient_id: patId, doctor_id: docId, slot: slot })
       });
-      const body = await res.json();
-      $("msg").textContent = res.ok ? `Booked! Appointment #${body.id}` : `Error: ${body.detail}`;
-      $("msg").style.color = res.ok ? "green" : "crimson";
-      load();
+      const data = await res.json();
+      if (res.ok) {
+        showMsg(`Booked! Appointment #${data.id} created with consultation fee: ${data.invoice.amount} BDT`, true);
+        loadData();
+      } else {
+        showMsg(data.detail ? `Error: ${data.detail}` : "Failed to book appointment.", false);
+      }
+    } catch (err) {
+      showMsg(`Network error: ${err.message}`, false);
+    }
+  };
+
+  function showMsg(text, isSuccess) {
+    const m = $("msg");
+    m.textContent = text;
+    m.className = isSuccess ? "msg-success show" : "msg-error show";
+    setTimeout(() => { m.className = m.className.replace("show", "").trim(); }, 6000);
+  }
+
+  // Cancel action
+  async function cancelAppointment(id) {
+    if (!confirm(`Are you sure you want to cancel appointment #${id}?`)) return;
+    const res = await fetch(`/appointments/${id}/cancel`, { method: "POST" });
+    if (res.ok) {
+      showMsg(`Appointment #${id} successfully cancelled. Notification dispatched to patient.`, true);
+      loadData();
+    }
+  }
+
+  // Pay action via bKash Adapter
+  async function payInvoice(id) {
+    const res = await fetch(`/invoices/${id}/pay`, { method: "POST" });
+    const data = await res.json();
+    if (res.ok) {
+      alert(`bKash Payment Successful!\nTransaction ID: ${data.txn_id}\nInvoice INV-${id} is now PAID.`);
+      loadData();
+    } else {
+      alert(`Payment Failed: ${data.detail}`);
+    }
+  }
+
+  // Add Patient action
+  $("btn-add-patient").onclick = async () => {
+    const name = $("new-pat-name").value.trim();
+    const phone = $("new-pat-phone").value.trim();
+    const age = +$("new-pat-age").value;
+    const msg = $("pat-msg");
+
+    const res = await fetch("/patients", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, phone, age })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      msg.innerHTML = `<span style="color:#10b981;font-weight:600;">✓ Patient #${data.id} registered!</span>`;
+      $("new-pat-name").value = ""; $("new-pat-phone").value = ""; $("new-pat-age").value = "";
+      loadData();
+    } else {
+      msg.innerHTML = `<span style="color:#ef4444;font-weight:600;">Error: ${data.detail}</span>`;
+    }
+  };
+
+  // Add Doctor action
+  $("btn-add-doctor").onclick = async () => {
+    const name = $("new-doc-name").value.trim();
+    const specialty = $("new-doc-spec").value.trim();
+    const fee = +$("new-doc-fee").value;
+    const msg = $("doc-msg");
+
+    const res = await fetch("/doctors", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, specialty, fee })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      msg.innerHTML = `<span style="color:#10b981;font-weight:600;">✓ Doctor #${data.id} added!</span>`;
+      $("new-doc-name").value = ""; $("new-doc-spec").value = ""; $("new-doc-fee").value = "";
+      loadData();
+    } else {
+      msg.innerHTML = `<span style="color:#ef4444;font-weight:600;">Error: ${data.detail}</span>`;
+    }
+  };
+
+  // Re-seed button
+  $("btn-seed").onclick = async () => {
+    await fetch("/seed", { method: "POST" });
+    alert("Sample patients and doctors loaded successfully!");
+    loadData();
+  };
+
+  // Tab switching
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+      btn.classList.add("active");
+      $(btn.dataset.tab).classList.add("active");
     };
-    load();
-  </script>
+  });
+
+  $("patient").onchange = updateFeePreview;
+  $("doctor").onchange = updateFeePreview;
+
+  setDefaultSlot();
+  loadData();
+</script>
 </body>
 </html>

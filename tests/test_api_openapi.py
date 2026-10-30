@@ -34,6 +34,14 @@ def test_errors_are_mapped_to_http_codes(client):
     assert client.post("/invoices/99/pay").status_code == 404
 
 
+def test_seed_endpoint_populates_initial_data(client):
+    res = client.post("/seed")
+    assert res.status_code == 200
+    assert res.json()["status"] == "seeded"
+    assert len(client.get("/patients").json()) >= 3
+    assert len(client.get("/doctors").json()) >= 3
+
+
 def test_openapi_contract_documents_every_module(client):
     spec = client.get("/openapi.json").json()
     assert spec["info"]["title"] == "MediSlot API"
