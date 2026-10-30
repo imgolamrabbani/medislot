@@ -2,7 +2,7 @@
 import re
 from datetime import datetime
 
-from .billing import fee_strategy_for
+from .billing import PaymentGateway, fee_strategy_for
 from .db import Repository
 from .events import EventBus
 
@@ -16,7 +16,7 @@ class ConflictError(Exception):
 
 
 class ClinicService:
-    def __init__(self, conn, gateway, bus: EventBus | None = None, repos=None):
+    def __init__(self, conn, gateway: PaymentGateway, bus: EventBus | None = None, repos=None):
         repos = repos or {t: Repository(conn, t)
                           for t in ("patients", "doctors", "appointments", "invoices")}
         self.patients, self.doctors = repos["patients"], repos["doctors"]
@@ -68,3 +68,11 @@ class ClinicService:
         patient = self._get(self.patients, appt["patient_id"])
         self.bus.publish("appointment_cancelled", {"phone": patient["phone"], "slot": appt["slot"]})
         return self.appointments.update(appointment_id, status="CANCELLED")
+
+    # ---- Module 4: Billing ----
+    def pay(self, invoice_id: int) -> dict:
+        invoice = self._get(self.invoices, invoice_id)
+        if invoice["paid"]:
+            raise ConflictError("Invoice already paid")
+        txn = self.gateway.charge(invoice["amount"], reference=f"INV-{invoice_id}")
+        return self.invoices.update(invoice_id, paid=1, txn_id=txn)
