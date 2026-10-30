@@ -1,0 +1,58 @@
+digraph UML {
+  graph [rankdir=TB, splines=ortho, newrank=true, nodesep=0.3, ranksep=0.6, fontname="Helvetica", dpi=220, pad=0.2];
+  node  [shape=plain, fontname="Helvetica", fontsize=11];
+  edge  [fontname="Helvetica", fontsize=9, color="#444444"];
+
+  ClinicService [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#e8f3fb">
+    <tr><td bgcolor="#0b6e99"><font color="white"><b>ClinicService</b></font></td></tr>
+    <tr><td align="left">- patients, doctors, appointments, invoices : Repository<br align="left"/>- gateway : PaymentGateway<br align="left"/>- bus : EventBus<br align="left"/></td></tr>
+    <tr><td align="left">+ register_patient(name, phone, age)<br align="left"/>+ add_doctor(name, specialty, fee)<br align="left"/>+ book(patient_id, doctor_id, slot)<br align="left"/>+ cancel(appointment_id)<br align="left"/>+ pay(invoice_id)<br align="left"/></td></tr></table>>];
+
+  Repository [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#f5f5f5">
+    <tr><td bgcolor="#555555"><font color="white"><b>Repository</b></font></td></tr>
+    <tr><td align="left">- conn : sqlite3.Connection<br align="left"/>- table : str<br align="left"/></td></tr>
+    <tr><td align="left">+ add(**data) : dict<br align="left"/>+ get(id) : dict<br align="left"/>+ find(**where) : list<br align="left"/>+ update(id, **data) : dict<br align="left"/></td></tr></table>>];
+
+  EventBus [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#fdf1e3">
+    <tr><td bgcolor="#d9822b"><font color="white"><b>EventBus</b>  «Observer»</font></td></tr>
+    <tr><td align="left">- subscribers : dict<br align="left"/></td></tr>
+    <tr><td align="left">+ subscribe(event, handler)<br align="left"/>+ publish(event, payload)<br align="left"/></td></tr></table>>];
+
+  FeeStrategy [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#eaf6ec">
+    <tr><td bgcolor="#2e8b57"><font color="white"><i>«interface»</i><br/><b>FeeStrategy</b>  «Strategy»</font></td></tr>
+    <tr><td align="left">+ compute(base_fee) : float<br align="left"/></td></tr></table>>];
+  StandardFee [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4"><tr><td><b>StandardFee</b></td></tr></table>>];
+  SeniorFee   [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4"><tr><td><b>SeniorFee</b> (-30%)</td></tr></table>>];
+  ChildFee    [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4"><tr><td><b>ChildFee</b> (-50%)</td></tr></table>>];
+
+  PaymentGateway [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#f1ecf9">
+    <tr><td bgcolor="#6a4c93"><font color="white"><i>«interface»</i><br/><b>PaymentGateway</b>  «Target»</font></td></tr>
+    <tr><td align="left">+ charge(amount, reference) : str<br align="left"/></td></tr></table>>];
+  BkashAdapter [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#f1ecf9">
+    <tr><td><b>BkashAdapter</b>  «Adapter»</td></tr>
+    <tr><td align="left">- client<br align="left"/></td></tr>
+    <tr><td align="left">+ charge(amount, reference) : str<br align="left"/></td></tr></table>>];
+  BkashSDK [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#ffffff">
+    <tr><td><b>bKash SDK client</b>  «Adaptee»</td></tr>
+    <tr><td align="left">+ create_payment(amount_poisha, invoice) : dict<br align="left"/></td></tr></table>>];
+
+  NotifierFactory [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#fbeaea">
+    <tr><td bgcolor="#b23a48"><font color="white"><b>NotifierFactory</b>  «Factory»</font></td></tr>
+    <tr><td align="left">+ create(channel, **kw) : Notifier<br align="left"/>+ register(channel, cls)<br align="left"/></td></tr></table>>];
+  Notifier [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#fbeaea">
+    <tr><td><i>«interface»</i><br/><b>Notifier</b></td></tr>
+    <tr><td align="left">+ send(to, message)<br align="left"/></td></tr></table>>];
+  InAppNotifier [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4"><tr><td><b>InAppNotifier</b></td></tr><tr><td align="left">- outbox : list<br align="left"/></td></tr></table>>];
+  SMSNotifier   [label=<<table border="1" cellborder="0" cellspacing="0" cellpadding="4"><tr><td><b>SMSNotifier</b></td></tr><tr><td align="left">- client<br align="left"/></td></tr></table>>];
+
+  ClinicService -> Repository [dir=back, arrowtail=diamond, xlabel="4 "];
+  ClinicService -> EventBus [arrowhead=vee, xlabel="publishes "];
+  ClinicService -> PaymentGateway [arrowhead=vee];
+  ClinicService -> FeeStrategy [arrowhead=vee, style=dashed, xlabel="uses "];
+  FeeStrategy -> {StandardFee SeniorFee ChildFee} [dir=back, arrowtail=onormal, style=dashed];
+  PaymentGateway -> BkashAdapter [dir=back, arrowtail=onormal, style=dashed];
+  BkashAdapter -> BkashSDK [arrowhead=vee, xlabel="adapts "];
+  EventBus -> Notifier [dir=back, arrowtail=vee, style=dashed, xlabel="subscribes "];
+  Notifier -> {InAppNotifier SMSNotifier} [dir=back, arrowtail=onormal, style=dashed];
+  Notifier -> NotifierFactory [dir=back, arrowtail=vee, style=dashed, xlabel="creates "];
+}
